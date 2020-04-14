@@ -1,6 +1,7 @@
 import tensorflow as tf
-from path import *
+from src.path import *
 import json
+import pickle
 
 def check_gpu():
     gpus = tf.config.list_physical_devices('GPU')
