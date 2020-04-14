@@ -21,8 +21,7 @@ class ResNetGenerator:
         num_downsamplings=2,
         num_blocks=9,
         norm='instance_norm',
-        activation='relu',
-        lr_scheduler=LinearDecay(0.0001, 200, 100)):
+        activation='relu'):
 
         self.norm = get_norm_layer(norm)
         self.activation = get_activation(activation)
