@@ -11,9 +11,6 @@ from src import join, mkdir, check_gpu, save_pickle
 from src.config import Struct, Config
 from src.data.make_data import MakeDataset
 
-from tensorflow.keras.callbacks import TensorBoard, EarlyStopping, \
-                                       LearningRateScheduler, \
-                                       ModelCheckpoint
 from tensorflow.keras import utils
 import tensorflow as tf
 
@@ -48,7 +45,7 @@ save_pickle(join(output_dir, 'config.pickle'), C)
 
 # build datasets
 make_train_data = MakeDataset(C, join(options.dataset, options.dataset_dir), training=True, repeat=False)
-train_dataset, _ = make_train_data.make_zip_dataset()
+train_dataset, dataset_length = make_train_data.make_zip_dataset()
 
 make_test_data = MakeDataset(C, join(options.dataset, options.dataset_dir), training=False, shuffle=False, repeat=True)
 test_dataset = make_test_data.make_zip_dataset()
