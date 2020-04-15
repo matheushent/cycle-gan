@@ -57,7 +57,9 @@ class ConvDiscriminator:
         model = tf.keras.Model(inputs=inputs, outputs=x)
 
         model.compile(
-            optimizer=self.optimizer
+            optimizer=self.optimizer,
+            loss='mse',
+            metrics=['accuracy']
         )
 
         return model

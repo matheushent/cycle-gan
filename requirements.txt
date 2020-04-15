@@ -5,3 +5,5 @@ scikit-image==0.16.1
 imutils==0.5.3
 opencv-python==4.1.0.25
 oyaml==0.9
+graphviz==0.8.4
+matplotlib==2.2.2

@@ -41,3 +41,9 @@ class Config:
         self.seed = 2020
 
         self.num_prefetch_batch = 1
+
+        self.titles = ['Original', 'Translated', 'Reconstructed']
+
+        self.r = 2
+        
+        self.c = 3
