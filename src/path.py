@@ -10,5 +10,5 @@ def mkdir(path):
         path (str): Path to be created
     """
 
-    if not os.exists(path):
+    if not os.path.exists(path):
         os.makedirs(path)
