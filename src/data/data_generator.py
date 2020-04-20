@@ -1,5 +1,6 @@
 """Core module for data generator related operations"""
 import tensorflow as tf
+import sys
 import os
 
 from src import join
@@ -8,7 +9,6 @@ class Gen:
 
     def __init__(self):
 
-        self.path = None
         self.dtype = tf.uint8
         self.all_images = None
 
@@ -23,7 +23,11 @@ class Gen:
         """
 
         image = tf.io.read_file(path)
-        image = tf.image.decode_png(image, 3) # fix channels to 3
+        image = tf.cond(
+            tf.image.is_jpeg(image),
+            lambda: tf.image.decode_jpeg(image, 3), # fix channels to 3
+            lambda: tf.image.decode_png(image, 3)
+        )
 
         return image
 
@@ -37,7 +41,7 @@ class Gen:
         for image in self.all_images:
             try:
 
-                image = self.parser_function(join(self.path, image))
+                image = self.parser_function(image)
 
                 yield image
             except Exception as e:

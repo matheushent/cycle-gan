@@ -12,7 +12,7 @@ def save_models_weights(models_dict, output_dir):
     """
 
     for model_name, model in models_dict.items():
-        out_dir = join(output_dir, model_name + '.h5')
+        out_dir = join(output_dir, 'weights', model_name + '.h5')
         model.save_weights(out_dir)
 
 def stop_training(models_dict):

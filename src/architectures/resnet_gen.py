@@ -68,7 +68,7 @@ class ResNetGenerator:
         # 4
         for _ in range(self.num_downsamplings):
             self.dim //= 2
-            x = tf.keras.layers.Conv2DTranspose(self.dim, 3, strides=2, padding='same', kernel_initiliazer=CONV_KERNEL_INITIALIZER, use_bias=False)(x)
+            x = tf.keras.layers.Conv2DTranspose(self.dim, 3, strides=2, padding='same', kernel_initializer=CONV_KERNEL_INITIALIZER, use_bias=False)(x)
             x = self.norm()(x)            
             x = tf.keras.layers.Activation(self.activation)(x)
 
