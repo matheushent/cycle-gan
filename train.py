@@ -5,9 +5,11 @@ filterwarnings('ignore')
 
 from optparse import OptionParser
 import matplotlib.pyplot as plt
+import logging
 import pickle
 import json
 import time
+import sys
 
 import numpy as np
 
@@ -27,8 +29,8 @@ parser = OptionParser()
 
 parser.add_option("-d", dest="dataset", help="Dataset to use", default="monet2photo")
 parser.add_option("--dd", dest="dataset_dir", help="Path to datasets", default="datasets")
-parser.add_options("-e", type="int", dest="epochs", help="Epochs to run training", default=200)
-parser.add_options("--ed", type="int", dest="epoch_decay", help="Epoch to start decaying learning rate", default=100)
+parser.add_option("-e", type="int", dest="epochs", help="Epochs to run training", default=200)
+parser.add_option("--ed", type="int", dest="epoch_decay", help="Epoch to start decaying learning rate", default=100)
 parser.add_option("--si", type="int", dest="sample_interval", help="Interval to make samples", default=20)
 parser.add_option("-p", type="int", dest="patience", help="int indicating how many epochs without loss improvement is need to break training", default=10)
 parser.add_option("--mn", dest="model_name", help="Model name to identify specific model")
@@ -39,7 +41,25 @@ if not options.model_name:
     parser.error("You must pass --mn argument")
 
 # check if GPU is available. If is, use it automatically
-device = check_gpu()
+try:
+    gpus = tf.config.list_physical_devices('GPU')
+except:
+    try:
+        gpus = tf.config.experimental.list_physical_devices('GPU')
+    except:
+        raise ImportError("This code only supports Tensorflow 2.0.0 or 2.1.0. Tensorflow {} found.".format(tf.__version__))
+if gpus:
+    # by default we use just one GPU
+    # TODO: run in parallelism
+    device = '/GPU:0'
+
+    for gpu in gpus:
+        try:
+            tf.config.experimental.set_memory_growth(gpu, True)
+        except:
+            pass
+else:
+    device = '/CPU:0'
 
 # instantiate config class containing some params
 C = Config()
@@ -55,11 +75,11 @@ mkdir(output_dir)
 save_pickle(join(output_dir, 'config.pickle'), C)
 
 # build datasets
-make_train_data = MakeDataset(C, join(options.dataset, options.dataset_dir), training=True, repeat=False)
+make_train_data = MakeDataset(C, join(options.dataset_dir, options.dataset), training=True, repeat=False)
 train_dataset, dataset_length = make_train_data.make_zip_dataset()
 
-make_test_data = MakeDataset(C, join(options.dataset, options.dataset_dir), training=False, shuffle=False, repeat=True)
-test_dataset = make_test_data.make_zip_dataset()
+make_test_data = MakeDataset(C, join(options.dataset_dir, options.dataset), training=False, shuffle=False, repeat=True)
+test_dataset, _ = make_test_data.make_zip_dataset()
 
 # build linear decay
 linear_decay = LinearDecay(C.learning_rate, options.epochs, options.epoch_decay, C.beta_1)
@@ -132,7 +152,12 @@ combined_model.compile(
         optimizer=disc_a.optimizer
 )
 
-utils.plot_model(combined_model, join(output_dir, 'combined_model.png'))
+try:
+    utils.plot_model(combined_model, join(output_dir, 'combined_model.png'))
+except:
+    logging.warning("Make sure you have graphviz installed. To install on ubuntu simply run 'sudo apt-get install graphviz'")
+    print("It was not possible to plot the model")
+    pass
 
 # adversarial loss ground truths
 disc_patch = (C.crop_size / 2**4, C.crop_size / 2**4, 1) # output shape of discriminator
@@ -145,7 +170,7 @@ sample_dir = join(output_dir, 'samples_training')
 mkdir(sample_dir)
 
 # params
-epoch_length = 100
+epoch_length = dataset_length
 iter_num = 0
 best_loss = np.Inf
 last_epoch = 0
@@ -188,8 +213,7 @@ with tf.device(device):
 
             generator_loss = combined_model.train_on_batch(
                 [A, B],
-                [valid, valid,
-                ]
+                [valid, valid]
             )
 
             elapsed_time = time.time() - start_time
@@ -261,6 +285,7 @@ with tf.device(device):
                 "disc_b": disc_b.model,
                 "combined_model": combined_model
             }
+            mkdir(join(output_dir, 'weights'))
             save_models_weights(models_dict, output_dir)
 
             # early stopping
