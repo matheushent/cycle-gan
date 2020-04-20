@@ -21,20 +21,24 @@ class MakeDataset:
         self.C = C
         self.path = path
         self.training = training
-        self.map_fn = MakeDataset.get_map_function(self.training)
+        self.map_fn = MakeDataset.get_map_function(self.training, self.C)
         self.shuffle = shuffle
         self.drop_remainder = drop_remainder
         self.repeat = repeat
-        self.gen = Gen()
+        self.gen_a = Gen()
+        self.gen_b = Gen()
 
         if self.shuffle:
-            self.shuffle_bufffer_size = max(self.C.batch_size * 128, 2048)
-
+            self.shuffle_buffer_size = max(self.C.batch_size * 128, 2048)
 
     @staticmethod
-    def get_map_function(training):
+    def get_map_function(training, C):
         """Utility function to get the map function according
         to mode (train ou eval)
+
+        Args:
+            training (bool): Boolean to indicate training or testing
+            
 
         Returns:
             tf.function
@@ -81,22 +85,22 @@ class MakeDataset:
 
         return _map
 
-    def make_dataset(self, num_repeat, all_images, path=''):
+    def make_dataset(self, num_repeat, all_images, gen, path=''):
         """Utility function to build dataset
 
         Args:
             num_repeat (tf.int64): Number of times the dataset should be repeated
             all_images (list): List containing name of each target image
+            gen (python class): Generator class w.r.t A or B
             path (str): Path to folder containing each target image, e.g. './datasets/monet2photo/trainA'
 
         Returns:
             tf.data.Dataset instance
         """
 
-        self.gen.all_images = all_images
-        self.gen.path = path
+        gen.all_images = all_images
 
-        dataset = tf.data.Dataset.from_generator(self.gen.data_generator, self.gen.dtype)
+        dataset = tf.data.Dataset.from_generator(gen.data_generator, gen.dtype, tf.TensorShape([self.C.crop_size, self.C.crop_size, 3]))
 
         if self.shuffle:
             dataset = dataset.shuffle(self.shuffle_buffer_size)
@@ -106,10 +110,6 @@ class MakeDataset:
         dataset = dataset.batch(self.C.batch_size, drop_remainder=self.drop_remainder)
 
         dataset = dataset.repeat(num_repeat).prefetch(self.C.num_prefetch_batch)
-
-        # clear generator params
-        self.gen.all_images = None
-        self.gen.path = None
 
         return dataset
 
@@ -141,8 +141,8 @@ class MakeDataset:
                 B_repeat = 1
         
         # build datasets
-        A_dataset = self.make_dataset(A_repeat, A_all_images, path=a_path)
-        B_dataset = self.make_dataset(B_repeat, B_all_images, path=b_path)
+        A_dataset = self.make_dataset(A_repeat, A_all_images, self.gen_a, path=a_path)
+        B_dataset = self.make_dataset(B_repeat, B_all_images, self.gen_b, path=b_path)
 
         dataset = tf.data.Dataset.zip((A_dataset, B_dataset))
         dataset_length = max(len(A_all_images), len(B_all_images)) // self.C.batch_size
